@@ -1,0 +1,52 @@
+config:
+  serverPort: 3101
+  clients:
+    - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+
+service:
+  type: NodePort
+  ports:
+    http: 3101
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+snippets:
+  scrapeConfigs: |
+    - job_name: kubernetes-pods
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace]
+          action: keep
+          regex: muffin
+        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          target_label: app
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: pod
+        - source_labels: [__meta_kubernetes_pod_container_name]
+          target_label: container
+        - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+          action: replace
+          target_label: __path__
+          replacement: /var/log/pods/*$1/*.log
+      pipeline_stages:
+        - cri: {}
+        - regex:
+            expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<logLevel>[A-Z]+)\s+\[(?P<traceId>[a-f0-9]*),?(?P<spanId>[a-f0-9]*)\]'
+        - labels:
+            logLevel:
+            traceId:
+        - regex:
+            expression: 'traceId[=:](?P<traceIdAlt>[a-f0-9-]+)'
+        - labels:
+            traceIdAlt:
+
+

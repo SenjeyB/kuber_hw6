@@ -1,0 +1,49 @@
+repositories:
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: openzipkin
+    url: https://openzipkin.github.io/zipkin-helm
+
+helmDefaults:
+  createNamespace: true
+
+releases:
+  - name: loki
+    namespace: monitoring
+    chart: grafana/loki
+    version: 6.51.0
+    values:
+      - values/loki.yaml
+
+  - name: promtail
+    namespace: monitoring
+    chart: grafana/promtail
+    version: 6.17.1
+    values:
+      - values/promtail.yaml
+
+  - name: zipkin
+    namespace: monitoring
+    chart: openzipkin/zipkin
+    version: 0.4.0
+    values:
+      - values/zipkin.yaml
+
+  - name: grafana
+    namespace: monitoring
+    chart: grafana/grafana
+    version: 10.5.15
+    values:
+      - values/grafana.yaml
+
+  - name: muffin-currency
+    namespace: muffin
+    createNamespace: true
+    chart: ./muffin-currency-chart
+
+  - name: muffin-wallet
+    namespace: muffin
+    createNamespace: false
+    chart: ./muffin-wallet-chart
+    needs:
+      - muffin/muffin-currency

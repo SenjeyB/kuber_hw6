@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "muffin-wallet-chart.fullname" . }}
+  labels:
+    {{- include "muffin-wallet-chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "muffin-wallet-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "muffin-wallet-chart.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "muffin-wallet-chart.fullname" . }}
+      volumes:
+        - name: application-config-volume
+          configMap:
+            name: {{ include "muffin-wallet-chart.fullname" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          volumeMounts:
+            - name: application-config-volume
+              mountPath: /app/config
+          envFrom:
+            - secretRef:
+                name: {{ include "muffin-wallet-chart.fullname" . }}
+            - configMapRef:
+                name: {{ include "muffin-wallet-chart.fullname" . }}-env
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

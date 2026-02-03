@@ -1,0 +1,56 @@
+adminUser: admin
+adminPassword: admin
+
+persistence:
+  enabled: false
+
+securityContext:
+  fsGroup: 472
+  runAsUser: 472
+  runAsGroup: 472
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        uid: loki
+        url: http://loki.monitoring.svc.cluster.local:3100
+        access: proxy
+        isDefault: true
+        jsonData:
+          derivedFields:
+            - datasourceUid: zipkin
+              matcherRegex: "traceId=([a-f0-9]+)"
+              name: TraceID
+              url: "$${__value.raw}"
+      - name: Zipkin
+        type: zipkin
+        uid: zipkin
+        url: http://zipkin.monitoring.svc.cluster.local:9411
+        access: proxy
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+dashboardsConfigMaps:
+  default: grafana-dashboards
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 30030
+
+ingress:
+  enabled: false

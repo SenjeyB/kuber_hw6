@@ -1,0 +1,7 @@
+apiVersion: v2
+name: muffin-wallet-chart
+description: Helm chart for Muffin Wallet with logging and tracing support
+
+type: application
+version: 1.0.0
+appVersion: "1.1.0"

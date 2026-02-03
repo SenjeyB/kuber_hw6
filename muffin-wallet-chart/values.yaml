@@ -1,0 +1,100 @@
+replicaCount: 1
+
+image:
+  repository: muffin-wallet-tracing
+  pullPolicy: Never
+  tag: "1.0.0"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8081
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: muffin-wallet.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 15s
+    path: /actuator/prometheus
+
+config:
+  enabled: true
+  jdkJavaOptions: "-Dspring.config.additional-location=/app/config/application.yaml"
+  applicationYaml: |
+    ---
+    server:
+      port: 8081
+      forward-headers-strategy: framework
+
+    spring:
+      application:
+        name: muffin
+      datasource:
+        url: jdbc:postgresql://192.168.49.1:5432/muffin_wallet?sslmode=disable
+        username: muffin-wallet
+        password: muffin-wallet
+
+    logging:
+      pattern:
+        level: "%5p [%X{traceId:-},%X{spanId:-}]"
+      file:
+        name: logs/app.log
+
+    springdoc:
+      swagger-ui:
+        use-root-path: true
+
+    currency:
+      service:
+        url: http://muffin-currency-muffin-currency-chart:8083/rate
+
+    management:
+      tracing:
+        sampling:
+          probability: 1.0
+      zipkin:
+        tracing:
+          endpoint: "http://zipkin.monitoring.svc.cluster.local:9411/api/v2/spans"
+      endpoints:
+        web:
+          exposure:
+            include: "*"
+      endpoint:
+        health:
+          probes:
+            enabled: true
+          show-details: always
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+        distribution:
+          percentiles-histogram:
+            http.server.requests: true
+
+secret:
+  enabled: true
+  databasePassword: "muffin-wallet"
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8081
+  initialDelaySeconds: 60
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8081
+  initialDelaySeconds: 30
+  periodSeconds: 10
